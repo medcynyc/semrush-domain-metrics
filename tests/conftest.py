@@ -24,20 +24,58 @@ def test_domain():
 def mock_response():
     """Mock API response."""
     class MockResponse:
-        def __init__(self, status_code=200, json_data=None):
+        def __init__(self, status_code=200, json_data=None, endpoint=None):
             self.status_code = status_code
-            self._json_data = json_data or {
-                "Rk": 1,  # Domain Rank
-                "Or": 5000,  # Organic Traffic
-                "Ot": 1000,  # Total Traffic
-                "Oc": 2500.50,  # Traffic Cost
-                "Ad": 45,  # Domain Authority
-                "Ac": 200,  # Referring Domains
-                "At": 180,  # Total Backlinks
-                "FK1": "Knowledge Panel",  # Featured Snippet Type
-                "FP1": 500,  # Featured Snippet Count
+            
+            # Define endpoint-specific responses
+            endpoint_responses = {
+                'domain_ranks': {
+                    "result": "success",
+                    "data": {
+                        "Rk": 1,  # Domain Rank
+                        "Or": 5000,  # Organic Traffic
+                        "Ot": 1000,  # Total Traffic
+                        "Oc": 2500.50,  # Traffic Cost
+                        "Ad": 45,  # Domain Authority
+                        "At": 180,  # Total Backlinks
+                        "Ac": 200,  # Referring Domains
+                        "FK1": "Knowledge Panel",
+                        "FP1": 500
+                    }
+                },
+                'domain_organic': {
+                    "result": "success",
+                    "data": {
+                        "Ph": 80,  # Position History
+                        "Po": 15,  # Position
+                        "Nq": 1200,  # Number of Queries
+                        "Cp": 2.5,  # CPC
+                        "Ur": "https://example.com",  # URL
+                        "Tr": 500  # Traffic
+                    }
+                },
+                'backlinks_overview': {
+                    "result": "success",
+                    "data": {
+                        "ascore": 85,
+                        "total": 1000,
+                        "domains_num": 200,
+                        "urls_num": 800,
+                        "ips_num": 180,
+                        "ipclassc_num": 150,
+                        "follows_num": 700,
+                        "nofollows_num": 300
+                    }
+                }
             }
-            self.url = "https://api.semrush.com/analytics/v3/domain_ranks"
+            
+            # Get the appropriate response data
+            if endpoint and endpoint in endpoint_responses:
+                self._json_data = endpoint_responses[endpoint]
+            else:
+                self._json_data = json_data or endpoint_responses['domain_ranks']
+            
+            self.url = f"https://api.semrush.com/analytics/v3/{endpoint if endpoint else 'domain_ranks'}"
             self.text = str(self._json_data)
         
         def json(self):
@@ -63,6 +101,17 @@ def semrush_client(api_key):
 def mock_client(monkeypatch, mock_response):
     """Mock httpx client."""
     def mock_request(*args, **kwargs):
-        return mock_response()
+        # Extract endpoint from URL
+        url = args[1] if len(args) > 1 else kwargs.get('url', '')
+        endpoint = None
+        
+        if 'domain_ranks' in url:
+            endpoint = 'domain_ranks'
+        elif 'domain_organic' in url:
+            endpoint = 'domain_organic'
+        elif 'backlinks_overview' in url:
+            endpoint = 'backlinks_overview'
+            
+        return mock_response(endpoint=endpoint)
     
     monkeypatch.setattr(httpx.Client, "request", mock_request)

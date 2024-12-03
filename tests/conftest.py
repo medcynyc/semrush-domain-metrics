@@ -27,21 +27,17 @@ def mock_response():
         def __init__(self, status_code=200, json_data=None):
             self.status_code = status_code
             self._json_data = json_data or {
-                "result": "success",
-                "organic_traffic": 5000,
-                "paid_traffic": 1000,
-                "organic_keywords": 500,
-                "paid_keywords": 100,
-                "traffic_cost": 2500.50,
-                "organic_traffic_cost": 2000.00,
-                "domain_authority": 45,
-                "backlink_count": 1000,
-                "referring_domains": 200,
-                "backlinks": 5000,
-                "referring_ips": 180,
-                "referring_subnets": 150
+                "Rk": 1,  # Domain Rank
+                "Or": 5000,  # Organic Traffic
+                "Ot": 1000,  # Total Traffic
+                "Oc": 2500.50,  # Traffic Cost
+                "Ad": 45,  # Domain Authority
+                "Ac": 200,  # Referring Domains
+                "At": 180,  # Total Backlinks
+                "FK1": "Knowledge Panel",  # Featured Snippet Type
+                "FP1": 500,  # Featured Snippet Count
             }
-            self.url = "https://api.semrush.com/test"
+            self.url = "https://api.semrush.com/analytics/v3/domain_ranks"
             self.text = str(self._json_data)
         
         def json(self):

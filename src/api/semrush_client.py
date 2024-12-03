@@ -7,7 +7,7 @@ from datetime import datetime
 from src.exceptions.errors import APIError
 from src.config.logging import get_logger
 from src.config.settings import settings
-from src.rate_limiter import rate_limit_manager
+from src.api.rate_limiter import rate_limit_manager
 
 logger = get_logger(__name__)
 

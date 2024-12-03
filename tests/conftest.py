@@ -26,6 +26,7 @@ def mock_response():
     class MockResponse:
         def __init__(self, status_code=200, json_data=None, endpoint=None):
             self.status_code = status_code
+            self._request = Mock()  # Add mock request
             
             # Define endpoint-specific responses
             endpoint_responses = {
@@ -77,17 +78,31 @@ def mock_response():
             
             self.url = f"https://api.semrush.com/analytics/v3/{endpoint if endpoint else 'domain_ranks'}"
             self.text = str(self._json_data)
+            self.headers = {}
+            self.reason_phrase = "OK" if status_code == 200 else "Bad Request"
         
         def json(self):
             return self._json_data
         
+        @property
+        def has_redirect_location(self):
+            return 'location' in self.headers
+        
+        @property
+        def is_success(self):
+            return 200 <= self.status_code < 300
+        
         def raise_for_status(self):
             if self.status_code >= 400:
+                message = (f"Client error '{self.status_code} {self.reason_phrase}' "
+                         f"for url '{self.url}'\nFor more information check: "
+                         f"https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/{self.status_code}")
                 raise httpx.HTTPStatusError(
-                    f"{self.status_code} Error",
-                    request=None,
+                    message,
+                    request=self._request,
                     response=self
                 )
+            return self
     return MockResponse
 
 @pytest.fixture
@@ -105,11 +120,11 @@ def mock_client(monkeypatch, mock_response):
         url = args[1] if len(args) > 1 else kwargs.get('url', '')
         endpoint = None
         
-        if 'domain_ranks' in url:
+        if '/analytics/v3/domain_ranks' in url:
             endpoint = 'domain_ranks'
-        elif 'domain_organic' in url:
+        elif '/analytics/v3/domain_organic' in url:
             endpoint = 'domain_organic'
-        elif 'backlinks_overview' in url:
+        elif '/analytics/v3/backlinks_overview' in url:
             endpoint = 'backlinks_overview'
             
         return mock_response(endpoint=endpoint)

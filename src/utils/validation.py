@@ -133,7 +133,7 @@ class ValidationHelper:
         required_fields: Optional[List[str]] = None
     ) -> List[str]:
         """
-        Validate keyword data structure.
+        Validate keyword data structure from SEMrush API V3.
         
         Args:
             data: Keyword data dictionary to validate
@@ -145,7 +145,7 @@ class ValidationHelper:
         errors = []
         
         if required_fields is None:
-            required_fields = ['keyword', 'search_volume', 'position']
+            required_fields = ['Keyword', 'Position', 'SearchVolume', 'CPC', 'Competition', 'NumberOfResults', 'Trends', 'URL', 'Traffic', 'TrafficCost']
         
         # Check required fields
         for field in required_fields:
@@ -153,13 +153,36 @@ class ValidationHelper:
                 errors.append(f"Missing required field: {field}")
         
         # Validate specific fields
-        if 'position' in data and data['position'] is not None:
-            if not self.validate_numeric_range(data['position'], 'position'):
-                errors.append(f"Invalid position value: {data['position']}")
+        if 'Position' in data and data['Position'] is not None:
+            if not self.validate_numeric_range(data['Position'], 'position'):
+                errors.append(f"Invalid position value: {data['Position']}")
         
-        if 'search_volume' in data and data['search_volume'] is not None:
-            if not self.validate_numeric_range(data['search_volume'], 'search_volume'):
-                errors.append(f"Invalid search volume: {data['search_volume']}")
+        if 'SearchVolume' in data and data['SearchVolume'] is not None:
+            if not self.validate_numeric_range(data['SearchVolume'], 'search_volume'):
+                errors.append(f"Invalid search volume: {data['SearchVolume']}")
+        
+        if 'CPC' in data and data['CPC'] is not None:
+            if not isinstance(data['CPC'], (int, float)) or data['CPC'] < 0:
+                errors.append(f"Invalid CPC value: {data['CPC']}")
+        
+        if 'Competition' in data and data['Competition'] is not None:
+            if not self.validate_numeric_range(data['Competition'], 'percentage'):
+                errors.append(f"Invalid competition value: {data['Competition']}")
+        
+        if 'NumberOfResults' in data and data['NumberOfResults'] is not None:
+            if not isinstance(data['NumberOfResults'], int) or data['NumberOfResults'] < 0:
+                errors.append(f"Invalid number of results: {data['NumberOfResults']}")
+        
+        # 'Trends' would typically be a list of 12 numbers, but this isn't enforced here as formats can vary
+        if 'URL' in data and data['URL']:
+            if not self.validate_url(data['URL']):
+                errors.append(f"Invalid URL: {data['URL']}")
+        
+        # Traffic and TrafficCost should be non-negative numbers
+        for field in ['Traffic', 'TrafficCost']:
+            if field in data and data[field] is not None:
+                if not self.validate_numeric_range(data[field], 'traffic'):
+                    errors.append(f"Invalid {field} value: {data[field]}")
         
         return errors
 
@@ -169,7 +192,7 @@ class ValidationHelper:
         required_fields: Optional[List[str]] = None
     ) -> List[str]:
         """
-        Validate metrics data structure.
+        Validate metrics data structure from SEMrush API V3.
         
         Args:
             data: Metrics data dictionary to validate
@@ -181,7 +204,7 @@ class ValidationHelper:
         errors = []
         
         if required_fields is None:
-            required_fields = ['date']
+            required_fields = ['Date']
         
         # Check required fields
         for field in required_fields:
@@ -189,22 +212,22 @@ class ValidationHelper:
                 errors.append(f"Missing required field: {field}")
         
         # Validate date field
-        if 'date' in data and data['date']:
-            if isinstance(data['date'], str):
-                if not self.validate_date_format(data['date']):
-                    errors.append(f"Invalid date format: {data['date']}")
-            elif not isinstance(data['date'], (datetime, date)):
+        if 'Date' in data and data['Date']:
+            if isinstance(data['Date'], str):
+                if not self.validate_date_format(data['Date'], '%Y%m%d'):  # SEMrush uses YYYYMMDD format
+                    errors.append(f"Invalid date format: {data['Date']}")
+            elif not isinstance(data['Date'], (datetime, date)):
                 errors.append("Date must be string or datetime object")
         
         # Validate traffic fields
-        traffic_fields = ['organic_traffic', 'paid_traffic', 'total_traffic']
+        traffic_fields = ['OrganicTraffic', 'PaidTraffic', 'TotalTraffic']
         for field in traffic_fields:
             if field in data and data[field] is not None:
                 if not self.validate_numeric_range(data[field], 'traffic'):
                     errors.append(f"Invalid {field} value: {data[field]}")
         
-        # Validate percentage fields
-        percentage_fields = ['market_share', 'visibility_score']
+        # Validate percentage fields (Visibility is a percentage in SEMrush)
+        percentage_fields = ['Visibility']
         for field in percentage_fields:
             if field in data and data[field] is not None:
                 if not self.validate_numeric_range(data[field], 'percentage'):
@@ -216,6 +239,8 @@ class ValidationHelper:
         """
         Validate competitor data structure.
         
+        This method remains largely the same as the fields for competitors haven't changed significantly in V3.
+        
         Args:
             data: Competitor data dictionary to validate
             
@@ -225,22 +250,21 @@ class ValidationHelper:
         errors = []
         
         # Required fields
-        required_fields = ['competitor_domain', 'date']
+        required_fields = ['CompetitorDomain', 'Date']
         for field in required_fields:
             if field not in data or data[field] is None:
                 errors.append(f"Missing required field: {field}")
         
         # Validate domain
-        if 'competitor_domain' in data and data['competitor_domain']:
-            if not self.validate_domain(data['competitor_domain']):
-                errors.append(f"Invalid competitor domain: {data['competitor_domain']}")
+        if 'CompetitorDomain' in data and data['CompetitorDomain']:
+            if not self.validate_domain(data['CompetitorDomain']):
+                errors.append(f"Invalid competitor domain: {data['CompetitorDomain']}")
         
         # Validate metrics
         metric_fields = {
-            'keyword_overlap_count': 'traffic',
-            'common_keywords_count': 'traffic',
-            'market_share_percentage': 'percentage',
-            'visibility_score': 'percentage'
+            'commonKeywords': 'traffic',
+            'marketShare': 'percentage',
+            'visibility': 'percentage'
         }
         
         for field, range_key in metric_fields.items():

@@ -6,28 +6,25 @@ import threading
 from datetime import datetime
 import queue
 import logging
+from src.config.logging import get_logger
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class RateLimiter:
     """Thread-safe rate limiter for API requests."""
     
     def __init__(
         self,
-        calls_per_second: int = 1,
-        calls_per_minute: int = 45,
+        calls_per_second: int = 10,
+        calls_per_minute: int = 600,
         max_retries: int = 3
     ):
         """
         Initialize rate limiter.
         
         Args:
-            calls_per_second: Maximum calls allowed per second
-            calls_per_minute: Maximum calls allowed per minute
+            calls_per_second: Maximum calls allowed per second (adjusted to SEMrush API V3 limits)
+            calls_per_minute: Maximum calls allowed per minute (adjusted to SEMrush API V3 limits)
             max_retries: Maximum number of retries when rate limit is hit
         """
         self.calls_per_second = calls_per_second
@@ -77,7 +74,7 @@ class RateLimiter:
             interval: Time interval in seconds
         """
         if current_count >= limit:
-            sleep_time = interval - (time.time() - self.second_queue.queue[0])
+            sleep_time = max(0, interval - (time.time() - self.second_queue.queue[0]))
             if sleep_time > 0:
                 logger.debug(f"Rate limit reached. Sleeping for {sleep_time:.2f} seconds")
                 time.sleep(sleep_time)
@@ -142,8 +139,8 @@ class RateLimitManager:
         with self._lock:
             if endpoint not in self._limiters:
                 self._limiters[endpoint] = RateLimiter(
-                    calls_per_second=calls_per_second or 1,
-                    calls_per_minute=calls_per_minute or 45
+                    calls_per_second=calls_per_second or 10,
+                    calls_per_minute=calls_per_minute or 600
                 )
             return self._limiters[endpoint]
 

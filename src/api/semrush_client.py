@@ -4,10 +4,10 @@ import os
 from typing import Optional, Dict, Any, List, Union
 import httpx
 from datetime import datetime
-from .rate_limiter import rate_limit_manager
 from src.exceptions.errors import APIError
 from src.config.logging import get_logger
 from src.config.settings import settings
+from src.rate_limiter import rate_limit_manager
 
 logger = get_logger(__name__)
 
@@ -31,26 +31,27 @@ class SEMrushAPIV3Client:
         
         # Domain-specific endpoint rate limits (adjust based on Semrush's limits)
         self.endpoint_limits = {
-            'analytics': {'per_second': 10, 'per_minute': 100},
-            'backlinks': {'per_second': 10, 'per_minute': 100}
+            'domain_ranks': {'per_second': 10, 'per_minute': 600},
+            'domain_organic': {'per_second': 10, 'per_minute': 600},
+            'backlinks_overview': {'per_second': 10, 'per_minute': 600}
         }
 
     def get_domain_overview(self, domain: str) -> Dict[str, Any]:
         """Retrieve domain overview data."""
         endpoint = f'/analytics/v3/domain_ranks'
-        params = self._prepare_params(domain, 'Ot,Oc,Or,Ob,Op,Od')
+        params = self._prepare_params(domain, 'Db,Dn,Rk,Or,Ot,Oc,Ad,At,Ac,FK1,FP1')
         return self._make_request(endpoint, params)
 
     def get_domain_metrics(self, domain: str) -> Dict[str, Any]:
-        """Fetch detailed domain metrics."""
+        """Fetch detailed domain metrics for organic search data."""
         endpoint = f'/analytics/v3/domain_organic'
-        params = self._prepare_params(domain, 'Rk,Kt,Po,Cp,Ur,Tr')
+        params = self._prepare_params(domain, 'Ph,Po,Nq,Cp,Ur,Tr')
         return self._make_request(endpoint, params)
 
     def get_backlinks_overview(self, domain: str) -> Dict[str, Any]:
         """Get an overview of domain backlinks."""
-        endpoint = f'/backlinks/v3/domain_backlinks'
-        params = self._prepare_params(domain, 'source_url,anchor,external,nofollow')
+        endpoint = f'/analytics/v3/backlinks_overview'
+        params = self._prepare_params(domain, 'ascore,total,domains_num,urls_num,ips_num,ipclassc_num,follows_num,nofollows_num')
         return self._make_request(endpoint, params)
 
     def _prepare_params(self, domain: str, export_columns: str) -> Dict[str, Any]:
@@ -60,7 +61,7 @@ class SEMrushAPIV3Client:
             'target': domain,
             'database': self.database,
             'display_limit': 100,
-            'display_sort': 'tr_count_desc',
+            'display_sort': 'tr_desc',
             'export_columns': export_columns
         }
 
@@ -84,7 +85,7 @@ class SEMrushAPIV3Client:
         Raises:
             APIError: If the request fails
         """
-        endpoint_key = endpoint.split('/')[1]  # Get 'analytics' or 'backlinks'
+        endpoint_key = endpoint.split('/')[2]  # Get 'domain_ranks', 'domain_organic', or 'backlinks_overview'
         rate_limiter = self._get_rate_limiter(endpoint_key)
         rate_limiter.wait()
         
@@ -106,7 +107,7 @@ class SEMrushAPIV3Client:
             try:
                 error_json = e.response.json()
                 if isinstance(error_json, dict):
-                    error_text = error_json.get('error', {}).get('message', str(e))
+                    error_text = error_json.get('message', str(e))
             except Exception:
                 pass
             
@@ -126,7 +127,7 @@ class SEMrushAPIV3Client:
         return rate_limit_manager.get_limiter(
             endpoint,
             calls_per_second=limits.get('per_second', 1),
-            calls_per_minute=limits.get('per_minute', 10)
+            calls_per_minute=limits.get('per_minute', 600)
         )
 
     def __del__(self):

@@ -73,7 +73,7 @@ class DomainMetricsCollector(BaseCollector):
             domain_id = self._get_or_create_domain_id()
             if not domain_id:
                 return False
-            
+
             # Collect metrics
             all_metrics = {}
             
@@ -150,76 +150,8 @@ class DomainMetricsCollector(BaseCollector):
             self.logger.error(f"Failed to get/create domain ID: {str(e)}")
             return None
 
-    def get_historical_metrics(
-        self,
-        start_date: datetime,
-        end_date: datetime
-    ) -> Optional[List[Dict[str, Any]]]:
-        """
-        Get historical domain metrics.
-        
-        Args:
-            start_date: Start date for historical data
-            end_date: End date for historical data
-            
-        Returns:
-            List of historical metrics if successful, None otherwise
-        """
-        try:
-            query = """
-                SELECT * FROM semrush_domain_metrics
-                WHERE domain_id = (
-                    SELECT id FROM domains WHERE domain = %s
-                )
-                AND date BETWEEN %s AND %s
-                ORDER BY date
-            """
-            
-            with self.db.get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(query, (self.domain, start_date, end_date))
-                    columns = [desc[0] for desc in cur.description]
-                    return [dict(zip(columns, row)) for row in cur.fetchall()]
-                    
-        except Exception as e:
-            self.logger.error(f"Failed to get historical metrics: {str(e)}")
-            return None
-
-    def get_latest_metrics(self) -> Optional[Dict[str, Any]]:
-        """
-        Get most recent domain metrics.
-        
-        Returns:
-            Latest metrics if available, None otherwise
-        """
-        try:
-            query = """
-                SELECT * FROM semrush_domain_metrics
-                WHERE domain_id = (
-                    SELECT id FROM domains WHERE domain = %s
-                )
-                ORDER BY date DESC
-                LIMIT 1
-            """
-            
-            with self.db.get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(query, (self.domain,))
-                    result = cur.fetchone()
-                    
-                    if result:
-                        columns = [desc[0] for desc in cur.description]
-                        return dict(zip(columns, result))
-                    return None
-                    
-        except Exception as e:
-            self.logger.error(f"Failed to get latest metrics: {str(e)}")
-            return None
-
 if __name__ == "__main__":
     # Example usage
     collector = DomainMetricsCollector()
-    success = collector.run()
+    success = collector.collect()
     print(f"Collection {'successful' if success else 'failed'}")
-    stats = collector.get_collection_stats()
-    print(f"Collection stats: {stats}")

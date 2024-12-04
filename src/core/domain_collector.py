@@ -223,3 +223,4 @@ if __name__ == "__main__":
     print(f"Collection {'successful' if success else 'failed'}")
     stats = collector.get_collection_stats()
     print(f"Collection stats: {stats}")
+

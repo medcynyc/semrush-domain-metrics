@@ -153,3 +153,4 @@ def test_invalid_domain_format(semrush_client):
     """Test with invalid domain format."""
     with pytest.raises(APIError):
         semrush_client.get_domain_overview("not-a-valid-domain")
+

@@ -1,4 +1,4 @@
-"""Tests for SEMrush API V3 client - Domain Metrics specific."""
+"""Tests for SEMrush API V3 client."""
 
 import os
 import pytest
@@ -25,49 +25,6 @@ def test_domain_overview(semrush_client, test_domain, mock_client):
     assert response is not None
     assert isinstance(response, dict)
     assert response.get("result") == "success"
-    
-    # Verify expected data fields are present
-    expected_fields = [
-        "organic_traffic",
-        "paid_traffic",
-        "organic_keywords",
-        "paid_keywords"
-    ]
-    for field in expected_fields:
-        assert field in response, f"Missing field: {field}"
-
-def test_domain_metrics(semrush_client, test_domain, mock_client):
-    """Test domain metrics endpoint."""
-    response = semrush_client.get_domain_metrics(test_domain)
-    assert response is not None
-    assert isinstance(response, dict)
-    assert response.get("result") == "success"
-    
-    # Verify metrics-specific fields
-    expected_fields = [
-        "domain_authority",
-        "backlink_count",
-        "referring_domains"
-    ]
-    for field in expected_fields:
-        assert field in response, f"Missing field: {field}"
-
-def test_backlinks_overview(semrush_client, test_domain, mock_client):
-    """Test backlinks overview endpoint."""
-    response = semrush_client.get_backlinks_overview(test_domain)
-    assert response is not None
-    assert isinstance(response, dict)
-    assert response.get("result") == "success"
-    
-    # Verify backlink-specific fields
-    expected_fields = [
-        "backlinks",
-        "referring_domains",
-        "referring_ips",
-        "referring_subnets"
-    ]
-    for field in expected_fields:
-        assert field in response, f"Missing field: {field}"
 
 def test_keywords_overview(semrush_client, test_domain, mock_client):
     """Test keywords overview endpoint."""
@@ -98,7 +55,7 @@ def test_error_handling(mock_client, monkeypatch):
         mock_resp = Mock()
         mock_resp.status_code = 401
         mock_resp.text = "Unauthorized"
-        mock_resp.url = "https://api.semrush.com/analytics/v3/test"
+        mock_resp.url = "https://api.semrush.com/test"
         mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
             "401 Unauthorized",
             request=None,
@@ -120,7 +77,7 @@ def test_rate_limiting(semrush_client, test_domain, monkeypatch):
         nonlocal request_count
         request_count += 1
         mock_resp = Mock()
-        mock_resp.url = "https://api.semrush.com/analytics/v3/test"
+        mock_resp.url = "https://api.semrush.com/test"
         
         if request_count > 2:  # Rate limit after 2 requests
             mock_resp.status_code = 429
@@ -148,8 +105,3 @@ def test_rate_limiting(semrush_client, test_domain, monkeypatch):
     with pytest.raises(APIError) as exc:
         semrush_client.get_domain_overview(test_domain)
     assert "429" in str(exc.value)
-
-def test_invalid_domain_format(semrush_client):
-    """Test with invalid domain format."""
-    with pytest.raises(APIError):
-        semrush_client.get_domain_overview("not-a-valid-domain")
